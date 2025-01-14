@@ -39,10 +39,10 @@ def save_to_google_sheet(data):
             # Prepare data in a proper format to match Google Sheets columns
             formatted_data = [current_date] + data  # Prepend the current date to the data
 
-            # Use expected headers to prevent issues with non-unique headers
-            headers = ["Date", "Weight", "Pressure", "Temperature", "Inspector Name"]
-
             # Ensure correct header mapping
+            headers = ["Date", "Weight", "Pressure", "Temperature", "InspectorName"]
+
+            # Ensure there are no extra or unexpected headers in the sheet
             existing_records = sheet.get_all_records(expected_headers=headers)
             st.write("Existing records:", existing_records)
 
@@ -84,7 +84,7 @@ with st.form("input_form"):
     weight = st.number_input("Weight (kg)", min_value=0.0, step=0.1)
     pressure = st.number_input("Pressure (bar)", min_value=0.0, step=0.1)
     temperature = st.number_input("Temperature (°C)", min_value=0.0, step=0.1)
-    inspector_name = st.text_input("Inspector Name")
+    inspector_name = st.text_input("InspectorName")
     submit = st.form_submit_button("Submit")
 
 if submit:
@@ -98,10 +98,10 @@ if submit:
             "Weight": weight,
             "Pressure": pressure,
             "Temperature": temperature,
-            "Inspector Name": inspector_name
+            "InspectorName": inspector_name
         })
         if report_file:
             with open(report_file, "rb") as file:
                 st.download_button("Download Report", file, file_name=report_file)
     else:
-        st.error("Please fill in all required fields (Batch ID and Inspector Name).")
+        st.error("Please fill in all required fields (Batch ID and InspectorName).")
