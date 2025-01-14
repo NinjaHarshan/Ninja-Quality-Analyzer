@@ -19,7 +19,7 @@ def connect_to_google_sheets():
 
         # Authorize the client and access the Google Sheet
         client = gspread.authorize(credentials)
-        sheet = client.open("QualityReport").worksheet("Sheet1")  # Replace with your Google Sheet name if not Sheet1
+        sheet = client.open("QualityReport").sheet1  # Replace with your Google Sheet name
         return sheet
     except Exception as e:
         st.error(f"Error connecting to Google Sheets: {e}")
@@ -30,14 +30,21 @@ def save_to_google_sheet(data):
     sheet = connect_to_google_sheets()
     if sheet:
         try:
+            # Debugging: Check the data being passed to Google Sheets
+            st.write("Data being saved:", data)
+            
             # Get the current date for the "Date" field
             current_date = datetime.now().strftime("%Y-%m-%d")
             
             # Prepare data in a proper format to match Google Sheets columns
             formatted_data = [current_date] + data  # Prepend the current date to the data
 
-            # Debugging: Check the data being passed to Google Sheets
-            st.write("Formatted Data being saved:", formatted_data)
+            # Ensure the header is correct
+            headers = ["Date", "Batch ID", "Weight", "Pressure", "Temperature", "InspectorName"]
+
+            # Get all existing records from the sheet (this ensures we match headers)
+            existing_records = sheet.get_all_records()  # You can skip 'expected_headers' here
+            st.write("Existing records:", existing_records)
 
             # Append the row to Google Sheets
             sheet.append_row(formatted_data)
