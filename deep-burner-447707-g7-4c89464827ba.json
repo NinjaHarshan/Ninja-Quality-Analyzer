@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "deep-burner-447707-g7",
+  "private_key_id": "4c89464827bac556cfc56ecd199ce11d6e0110f0",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEuwIBADANBgkqhkiG9w0BAQEFAASCBKUwggShAgEAAoIBAQCmwFKvSOO/gdWE\nV8R0XLZ5gn0D9IzfRoQY+/WfhDonm3kDkMfaYv2aPt6B8V6pgPnvxtik1SZbqu5r\n5t24dH93aE9LESpREB7Py/JXxjI8MqWv/Aa4SwmX9REHfOodF7CxqZ6pu17Rfrkq\n4pN8n9NMSenUHJv1WWgEqSATy1iRJ0QmZCXBuHxeIaw4PMeF0FtCfQbaqPhGgUjZ\nkE9HzdhMIxkA2jnawyF6avDm03S05VGX+c60OluxQ4+E/Ne3+22hhQJ4gI5gjUr2\niC6ZATToWpEEi4vRwU9SplOl/k2HDgh6vO01MVXclmo0begoEf5g3yJX+oHC9o0e\n0eOXm2ZRAgMBAAECgf9uHvR77Zb6EbQAAjYq4k9fT11gD1A440i5dytufNQq8/Gm\n+SYCgv0XsA0ho1Twe8yTHK5VrK34O5nYiE5EUisboDc9S8i2X/75G6afcLQcLRZe\ncgG+E0/ymlT0rPmu3MZDjdDKJoMntphySc88rg/MgcN54KreDH01FruoVtHWiRXy\nO1FFhLnpik+nxEpkIwU88fjG2rJUUu8C4lAu17zCu/T6hgOVKKSYyEUuIrlUdA6w\nYu9eEpSaSTOgKmkTZ3ugcPrjFKtOud1hXO+DXdh/yyyVewC4m9eFNkOT6ZMdCX2T\nnh9E7c7ekCzktoj33ZibuRWViB9VUYUzdceJyWECgYEA4bryYcRctgM6dzcywsGf\nMpaHZCmI8nEZOHCpQxQzHWOzGLWD5kJXa14WePKTAiF+teovQgZNnIt3dAxj19oZ\nXvUc+ZNlz0+SZehjG2iz67PWh5E2w8BOhqR9CYEhzP8USPRMCcI+3t2LfenT55eQ\nc1H1v8arSllXZ/sCt8Aw3TECgYEAvRyyYjjZ7sbEa4EQKE0OXuZ/rkfFTcP2MWeR\n2pqGgNT8HeDNfSuzxN2ydSvynBSBLulnjtmjAbKiSfp0afh5M9HnWkLM3haIf6E/\nkaAWOu20Ip7qRnw43R3BIlXOjGqoS5va3iGTC7JLru+h9zRiBoH7vMRtqV+t8PbK\nX80YUyECgYAmTQIzdI4GlCWndMY4JYJNoxz18dY6zNXqrbMKnrLNmc0ZtDLdLwSG\nQ0Cs5PvssKI/W60JFui0VzW9ixyl02vaoNx5vHjZ5DaC9Btc2zcsFyefeRRBwq+Q\nSPiuVCrYDa/zcQA156+jQRQaGULLWPw5lP6Nu7f0tZQPIJgldYbVAQKBgHETvqoy\nmkVHPt2VP6cJZEVkiAYaziRQv14NMs5GxZQ1RkdLSzPENOrLMVEUpS2kqRX25EAr\nbGewe4/GnWNb+oT8xtxWww8s5BOExHD8Cy7TQXnOEgFxd8LnbrtsGWQmxljnaXiX\nFMjSpKSGjw80mESR5oeZ4IR9PJGvz5R3G0thAoGBAJS/2DTY/lun1u0Bp34/kScp\nNN5SW2arVfttIAZsCjRgM/gG8o6vyz062gKheSxRNf4ohKWpRQ+VjFQPEziwaAP2\naCVT1BMRCe2IWfThbKCUDx6Ii3THMt8JuafIkaAztHM8pu5y/bYOgMnPMzpPAq+g\nCQY++e7kFjRdGyI571Ma\n-----END PRIVATE KEY-----\n",
+  "client_email": "port-worker-service-account@deep-burner-447707-g7.iam.gserviceaccount.com",
+  "client_id": "108235906284209887858",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/port-worker-service-account%40deep-burner-447707-g7.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
