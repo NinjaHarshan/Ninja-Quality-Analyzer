@@ -2,6 +2,7 @@ import streamlit as st
 import gspread
 from google.oauth2.service_account import Credentials
 from fpdf import FPDF
+from datetime import datetime
 
 # Google Sheets setup
 def connect_to_google_sheets():
@@ -32,8 +33,14 @@ def save_to_google_sheet(data):
             # Debugging: Check the data being passed to Google Sheets
             st.write("Data being saved:", data)
             
+            # Get the current date for the "Date" field
+            current_date = datetime.now().strftime("%Y-%m-%d")
+            
+            # Prepare data in a proper format to match Google Sheets columns
+            formatted_data = [current_date] + data  # Prepend the current date to the data
+
             # Append the row to Google Sheets
-            sheet.append_row(data)
+            sheet.append_row(formatted_data)
 
             # Debugging: Print all records after appending to ensure data is saved
             st.write("Updated data in sheet:", sheet.get_all_records())
