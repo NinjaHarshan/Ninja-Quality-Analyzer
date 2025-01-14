@@ -10,7 +10,7 @@ def connect_to_google_sheets():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     
     # Load credentials from the JSON key file
-    creds = ServiceAccountCredentials.from_json_keyfile_name(r"Ninja-Quality-Analyzer/blob/master/sheet_credentials.json", scope)
+    creds = ServiceAccountCredentials.from_json_keyfile_name("sheet_credentials.json", scope)
     
     # Authorize the client and access the Google Sheet
     client = gspread.authorize(creds)
