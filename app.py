@@ -40,7 +40,7 @@ def save_to_google_sheet(data):
             formatted_data = [current_date] + data  # Prepend the current date to the data
 
             # Ensure correct header mapping
-            headers = ["Date", "Weight", "Pressure", "Temperature", "InspectorName"]
+            headers = ["Date", "Weight", "Pressure", "Temperature", "InspectorName"]  # Match headers exactly
 
             # Ensure there are no extra or unexpected headers in the sheet
             existing_records = sheet.get_all_records(expected_headers=headers)
@@ -84,7 +84,7 @@ with st.form("input_form"):
     weight = st.number_input("Weight (kg)", min_value=0.0, step=0.1)
     pressure = st.number_input("Pressure (bar)", min_value=0.0, step=0.1)
     temperature = st.number_input("Temperature (°C)", min_value=0.0, step=0.1)
-    inspector_name = st.text_input("InspectorName")
+    inspector_name = st.text_input("InspectorName")  # Ensure no spaces in field name
     submit = st.form_submit_button("Submit")
 
 if submit:
