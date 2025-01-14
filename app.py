@@ -10,7 +10,7 @@ def connect_to_google_sheets():
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
     
     # Load credentials from the JSON key file
-    creds = ServiceAccountCredentials.from_json_keyfile_name("deep-burner-447707-g7-dba3ee18cef2.json", scope)
+    creds = ServiceAccountCredentials.from_json_keyfile_name("deep-burner-447707-g7-4c89464827ba.json", scope)
     
     # Authorize the client and access the Google Sheet
     client = gspread.authorize(creds)
