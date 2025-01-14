@@ -39,14 +39,7 @@ def save_to_google_sheet(data):
             # Prepare data in a proper format to match Google Sheets columns
             formatted_data = [current_date] + data  # Prepend the current date to the data
 
-            # Ensure correct header mapping
-            headers = ["Date", "Weight", "Pressure", "Temperature", "InspectorName"]  # Match headers exactly
-
-            # Ensure there are no extra or unexpected headers in the sheet
-            existing_records = sheet.get_all_records(expected_headers=headers)
-            st.write("Existing records:", existing_records)
-
-            # Append the row to Google Sheets
+            # Append the row to Google Sheets directly (no need to use expected_headers)
             sheet.append_row(formatted_data)
 
             # Debugging: Print all records after appending to ensure data is saved
