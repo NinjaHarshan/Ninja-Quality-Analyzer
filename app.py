@@ -1,6 +1,6 @@
 import streamlit as st
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+from google.oauth2.service_account import Credentials
 from fpdf import FPDF
 
 # Google Sheets setup
@@ -10,10 +10,11 @@ def connect_to_google_sheets():
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 
         # Load credentials from Streamlit secrets
-        creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["google_credentials"], scope)
+        credentials_info = st.secrets["gcp_service_account"]  # Access the secret directly
+        credentials = Credentials.from_service_account_info(credentials_info)  # Create credentials object
 
         # Authorize the client and access the Google Sheet
-        client = gspread.authorize(creds)
+        client = gspread.authorize(credentials)
         sheet = client.open("QualityReport").sheet1  # Replace with your Google Sheet name
         return sheet
     except Exception as e:
