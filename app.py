@@ -44,6 +44,7 @@ def save_to_google_sheet(data):
 
             # Debugging: Print all records after appending to ensure data is saved
             st.write("Updated data in sheet:", sheet.get_all_records())
+
             st.success("Data saved to Google Sheets successfully!")
         except Exception as e:
             st.error(f"Error saving data to Google Sheets: {e}")
