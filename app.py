@@ -19,22 +19,31 @@ def connect_to_google_sheets():
 
         # Authorize the client and access the Google Sheet
         client = gspread.authorize(credentials)
-        sheet = client.open("QualityReport").sheet1  # Replace with your Google Sheet name
+        sheet = client.open("QualityReport").worksheet("Sheet1")  # Replace with your Google Sheet name if not Sheet1
         return sheet
     except Exception as e:
         st.error(f"Error connecting to Google Sheets: {e}")
         return None
 
-# Save data to Google Sheets without validation
+# Save data to Google Sheets
 def save_to_google_sheet(data):
     sheet = connect_to_google_sheets()
     if sheet:
         try:
-            # Debugging: Check the data being passed to Google Sheets
-            st.write("Data being saved:", data)
+            # Get the current date for the "Date" field
+            current_date = datetime.now().strftime("%Y-%m-%d")
+            
+            # Prepare data in a proper format to match Google Sheets columns
+            formatted_data = [current_date] + data  # Prepend the current date to the data
 
-            # Append the row to Google Sheets without validation
-            sheet.append_row(data)
+            # Debugging: Check the data being passed to Google Sheets
+            st.write("Formatted Data being saved:", formatted_data)
+
+            # Append the row to Google Sheets
+            sheet.append_row(formatted_data)
+
+            # Debugging: Print all records after appending to ensure data is saved
+            st.write("Updated data in sheet:", sheet.get_all_records())
 
             st.success("Data saved to Google Sheets successfully!")
         except Exception as e:
@@ -68,16 +77,13 @@ with st.form("input_form"):
     weight = st.number_input("Weight (kg)", min_value=0.0, step=0.1)
     pressure = st.number_input("Pressure (bar)", min_value=0.0, step=0.1)
     temperature = st.number_input("Temperature (°C)", min_value=0.0, step=0.1)
-    inspector_name = st.text_input("Inspector Name")
+    inspector_name = st.text_input("InspectorName")
     submit = st.form_submit_button("Submit")
 
 if submit:
     if batch_id and inspector_name:
-        # Prepare data for appending to Google Sheets
-        current_date = datetime.now().strftime("%Y-%m-%d")
-        data = [current_date, batch_id, weight, pressure, temperature, inspector_name]
-
-        # Save data to Google Sheets
+        # Save data to Google Sheets and locally
+        data = [batch_id, weight, pressure, temperature, inspector_name]
         save_to_google_sheet(data)
 
         # Generate and allow download of PDF report
@@ -85,10 +91,10 @@ if submit:
             "Weight": weight,
             "Pressure": pressure,
             "Temperature": temperature,
-            "Inspector Name": inspector_name
+            "InspectorName": inspector_name
         })
         if report_file:
             with open(report_file, "rb") as file:
                 st.download_button("Download Report", file, file_name=report_file)
     else:
-        st.error("Please fill in all required fields (Batch ID and Inspector Name).")
+        st.error("Please fill in all required fields (Batch ID and InspectorName).")
