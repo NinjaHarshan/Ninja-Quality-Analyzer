@@ -14,12 +14,12 @@ def connect_to_google_sheets():
         ]
 
         # Load credentials from Streamlit secrets
-        credentials_info = st.secrets["gcp_service_account"]  # Access the secret directly
+        credentials_info = st.secrets[r"C:\Users\Harshan G_NC24854\Downloads\My projects\Quality_app\deep-burner-447707-g7-4c89464827ba.jsont"]  # Access the secret directly
         credentials = Credentials.from_service_account_info(credentials_info, scopes=scope)  # Create credentials object
 
         # Authorize the client and access the Google Sheet
         client = gspread.authorize(credentials)
-        sheet = client.open("QualityReport").sheet1  # Replace with your Google Sheet name
+        sheet = client.open("test").Sheet1  # Replace with your Google Sheet name
         return sheet
     except Exception as e:
         st.error(f"Error connecting to Google Sheets: {e}")
