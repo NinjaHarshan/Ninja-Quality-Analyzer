@@ -7,11 +7,14 @@ from fpdf import FPDF
 def connect_to_google_sheets():
     try:
         # Define the scope of the permissions
-        scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+        scope = [
+            "https://www.googleapis.com/auth/spreadsheets",  # Correct scope for Sheets
+            "https://www.googleapis.com/auth/drive.file"    # Access to Google Drive files
+        ]
 
         # Load credentials from Streamlit secrets
         credentials_info = st.secrets["gcp_service_account"]  # Access the secret directly
-        credentials = Credentials.from_service_account_info(credentials_info)  # Create credentials object
+        credentials = Credentials.from_service_account_info(credentials_info, scopes=scope)  # Create credentials object
 
         # Authorize the client and access the Google Sheet
         client = gspread.authorize(credentials)
