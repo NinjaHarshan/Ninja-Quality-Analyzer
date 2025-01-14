@@ -29,8 +29,14 @@ def save_to_google_sheet(data):
     sheet = connect_to_google_sheets()
     if sheet:
         try:
-            print("Data being saved:", data)  # Debugging line to check the data
+            # Debugging: Check the data being passed to Google Sheets
+            st.write("Data being saved:", data)
+            
+            # Append the row to Google Sheets
             sheet.append_row(data)
+
+            # Debugging: Print all records after appending to ensure data is saved
+            st.write("Updated data in sheet:", sheet.get_all_records())
             st.success("Data saved to Google Sheets successfully!")
         except Exception as e:
             st.error(f"Error saving data to Google Sheets: {e}")
