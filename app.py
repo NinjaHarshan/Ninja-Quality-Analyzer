@@ -5,103 +5,114 @@ from fpdf import FPDF
 from datetime import datetime
 
 # Google Sheets setup
-def connect_to_google_sheets():
+def connect_to_google_sheets(json_file_path, sheet_name):
     try:
-        # Define the scope of the permissions
         scope = [
-            "https://www.googleapis.com/auth/spreadsheets",  # Correct scope for Sheets
-            "https://www.googleapis.com/auth/drive.file"    # Access to Google Drive files
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive.file"
         ]
-
-        # Load credentials from Streamlit secrets
-        credentials_info = st.secrets["gcp_service_account"]  # Access the secret directly
-        credentials = Credentials.from_service_account_info(credentials_info, scopes=scope)  # Create credentials object
-
-        # Authorize the client and access the Google Sheet
+        credentials = Credentials.from_service_account_file(json_file_path, scopes=scope)
         client = gspread.authorize(credentials)
-        sheet = client.open("QualityReport").sheet1  # Replace with your Google Sheet name
+        sheet = client.open(sheet_name).sheet1  # Ensure this matches your sheet name
         return sheet
     except Exception as e:
         st.error(f"Error connecting to Google Sheets: {e}")
         return None
 
 # Save data to Google Sheets
-def save_to_google_sheet(data):
-    sheet = connect_to_google_sheets()
+def save_to_google_sheet(data, json_file_path, sheet_name):
+    sheet = connect_to_google_sheets(json_file_path, sheet_name)
     if sheet:
         try:
-            # Debugging: Check the data being passed to Google Sheets
-            st.write("Data being saved:", data)
-            
-            # Get the current date for the "Date" field
-            current_date = datetime.now().strftime("%Y-%m-%d")
-            
-            # Prepare data in a proper format to match Google Sheets columns
-            formatted_data = [current_date] + data  # Prepend the current date to the data
-
-            # Ensure the header is correct
-            headers = ["Date", "Batch ID", "Weight", "Pressure", "Temperature", "InspectorName"]
-
-            # Get all existing records from the sheet (this ensures we match headers)
-            existing_records = sheet.get_all_records()  # You can skip 'expected_headers' here
-            st.write("Existing records:", existing_records)
-
-            # Append the row to Google Sheets
-            sheet.append_row(formatted_data)
-
-            # Debugging: Print all records after appending to ensure data is saved
-            st.write("Updated data in sheet:", sheet.get_all_records())
-
-            st.success("Data saved to Google Sheets successfully!")
+            sheet.append_row(data)
+            st.success("Data saved successfully!")
         except Exception as e:
             st.error(f"Error saving data to Google Sheets: {e}")
 
 # Generate PDF report
-def generate_pdf(batch_id, data):
+def generate_pdf(consignment_number, number_of_boxes, data, averages):
     try:
         pdf = FPDF()
         pdf.add_page()
         pdf.set_font("Arial", size=12)
-        pdf.cell(200, 10, txt=f"Quality Report for Batch {batch_id}", ln=True, align="C")
+        pdf.cell(200, 10, txt=f"Quality Report for Consignment {consignment_number}", ln=True, align="C")
+        pdf.cell(200, 10, txt=f"Number of Boxes: {number_of_boxes}", ln=True, align="L")
+        pdf.cell(200, 10, txt="", ln=True)  # Blank line
 
-        for key, value in data.items():
-            pdf.cell(200, 10, txt=f"{key}: {value}", ln=True, align="L")
+        # Add data for each box
+        for i, box_data in enumerate(data, start=1):
+            pdf.cell(200, 10, txt=f"Box {i} Details:", ln=True, align="L")
+            pdf.cell(200, 10, txt=f"   Weight: {box_data['weight']} kg", ln=True, align="L")
+            pdf.cell(200, 10, txt=f"   Pressure: {box_data['pressure']} bar", ln=True, align="L")
+            pdf.cell(200, 10, txt=f"   Temperature: {box_data['temperature']} °C", ln=True, align="L")
 
-        file_name = f"Batch_{batch_id}_Report.pdf"
+        # Add averages
+        pdf.cell(200, 10, txt="", ln=True)  # Blank line
+        pdf.cell(200, 10, txt="Averages:", ln=True, align="L")
+        pdf.cell(200, 10, txt=f"   Average Weight: {averages['weight']} kg", ln=True, align="L")
+        pdf.cell(200, 10, txt=f"   Average Pressure: {averages['pressure']} bar", ln=True, align="L")
+        pdf.cell(200, 10, txt=f"   Average Temperature: {averages['temperature']} °C", ln=True, align="L")
+
+        file_name = f"Consignment_{consignment_number}_Report.pdf"
         pdf.output(file_name)
         return file_name
     except Exception as e:
         st.error(f"Error generating PDF: {e}")
         return None
 
-# Streamlit App
+# Streamlit app
 st.title("Port Worker Quality Checker")
-st.header("Enter Quality Parameters")
 
-# Input form
-with st.form("input_form"):
-    batch_id = st.text_input("Batch ID")
-    weight = st.number_input("Weight (kg)", min_value=0.0, step=0.1)
-    pressure = st.number_input("Pressure (bar)", min_value=0.0, step=0.1)
-    temperature = st.number_input("Temperature (°C)", min_value=0.0, step=0.1)
-    inspector_name = st.text_input("InspectorName")
-    submit = st.form_submit_button("Submit")
+# Specify the path to your JSON credentials
+json_file_path = r"C:\Users\Harshan G_NC24854\Downloads\My projects\Quality_app\final-447815-9961556bd9c1.json"  # Replace with the actual path
+sheet_name = "IranApple"  # Replace with your sheet name
 
-if submit:
-    if batch_id and inspector_name:
-        # Save data to Google Sheets and locally
-        data = [batch_id, weight, pressure, temperature, inspector_name]
-        save_to_google_sheet(data)
+# Step 1: Consignment number
+consignment_number = st.text_input("Enter Consignment Number")
 
-        # Generate and allow download of PDF report
-        report_file = generate_pdf(batch_id, {
-            "Weight": weight,
-            "Pressure": pressure,
-            "Temperature": temperature,
-            "InspectorName": inspector_name
-        })
-        if report_file:
-            with open(report_file, "rb") as file:
-                st.download_button("Download Report", file, file_name=report_file)
-    else:
-        st.error("Please fill in all required fields (Batch ID and InspectorName).")
+if consignment_number:
+    # Step 2: Number of boxes
+    number_of_boxes = st.number_input("Enter Number of Boxes Picked for Testing", min_value=1, step=1)
+
+    if number_of_boxes > 0:
+        # Dynamic input for each box
+        box_data = []
+        for i in range(1, number_of_boxes + 1):
+            st.subheader(f"Box {i}")
+            weight = st.number_input(f"Enter Weight for Box {i} (kg)", min_value=0.0, step=0.1)
+            pressure = st.number_input(f"Enter Pressure for Box {i} (bar)", min_value=0.0, step=0.1)
+            temperature = st.number_input(f"Enter Temperature for Box {i} (°C)", min_value=0.0, step=0.1)
+            box_data.append({"weight": weight, "pressure": pressure, "temperature": temperature})
+
+        # Step 3: Inspector Name
+        inspector_name = st.text_input("Enter Inspector Name")
+
+        # Step 4: Submit button
+        if st.button("Submit"):
+            if inspector_name:
+                # Calculate averages
+                avg_weight = sum(box["weight"] for box in box_data) / number_of_boxes
+                avg_pressure = sum(box["pressure"] for box in box_data) / number_of_boxes
+                avg_temperature = sum(box["temperature"] for box in box_data) / number_of_boxes
+                averages = {"weight": avg_weight, "pressure": avg_pressure, "temperature": avg_temperature}
+
+                # Save data to Google Sheets
+                for i, box in enumerate(box_data, start=1):
+                    data_row = [
+                        consignment_number,
+                        i,
+                        box["weight"],
+                        box["pressure"],
+                        box["temperature"],
+                        inspector_name,
+                        datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    ]
+                    save_to_google_sheet(data_row, json_file_path, sheet_name)
+
+                # Generate PDF report
+                report_file = generate_pdf(consignment_number, number_of_boxes, box_data, averages)
+                if report_file:
+                    with open(report_file, "rb") as file:
+                        st.download_button("Download Report", file, file_name=report_file)
+            else:
+                st.error("Please enter the Inspector Name.")
