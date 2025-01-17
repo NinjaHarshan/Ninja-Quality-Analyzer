@@ -39,7 +39,7 @@ def validate_numeric(input_value):
     return bool(re.fullmatch(regex, input_value.strip()))
 
 # Streamlit App
-st.title("Port Worker Quality Checker")
+st.title("Apple Quality Analyzer")
 st.header("Enter Quality Parameters")
 
 # Firebase Initialization
@@ -102,7 +102,7 @@ with st.form("input_form"):
     st.subheader("Temperatures")
     temperatures = []
     for i in range(3):
-        # Default temperature with negative sign
+        # Pre-set temperature to negative sign, user can enter only numbers after it
         temperature = st.text_input(
             f"Temperature {i + 1} (°C) *",
             placeholder="Enter temperature (in °C, negative by default)",
@@ -153,7 +153,7 @@ if submit_button:
         for error in errors:
             st.error(error)
     else:
-        # Treat user input as negative value for temperatures
+        # Treat user input as negative value for temperatures (if it's not already a valid number)
         temperatures = [str(-abs(float(temp))) for temp in temperatures]
 
         data = {
@@ -172,8 +172,6 @@ if submit_button:
         if db:
             db.collection("port_worker_data").add(data)
             st.success("Data submitted successfully!")
-        else:
-            st.warning("Firebase connection not initialized.")
 
         # Generate and save PDF
         report_file = generate_pdf(consignment_number, data)
@@ -186,3 +184,6 @@ if submit_button:
                     file_name=report_file,
                     mime="application/pdf",
                 )
+        # Hide the form and show report generation section only
+        st.empty()
+        st.success("Form submitted successfully! The report is being generated.")
