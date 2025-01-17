@@ -1,11 +1,8 @@
 import streamlit as st
-import gspread
-from google.oauth2.service_account import Credentials
 from fpdf import FPDF
 from datetime import datetime
 import firebase_admin
 from firebase_admin import credentials, firestore
-import json
 
 # Shared Credentials Setup
 def get_credentials():
@@ -29,35 +26,6 @@ def initialize_firebase(cred_dict):
     except Exception as e:
         st.error(f"Error initializing Firebase: {e}")
         return None
-
-def connect_to_google_sheets():
-    """Connect to Google Sheets using credentials."""
-    try:
-        scope = [
-            "https://www.googleapis.com/auth/spreadsheets",
-            "https://www.googleapis.com/auth/drive.file"
-        ]
-        credentials_info = st.secrets["gcp_service_account"]
-        credentials = Credentials.from_service_account_info(credentials_info, scopes=scope)
-        client = gspread.authorize(credentials)
-        sheet = client.open("QualityReport").sheet1  # Replace with your actual Google Sheet name
-        return sheet
-    except Exception as e:
-        st.error(f"Error connecting to Google Sheets: {e}")
-        return None
-
-def save_to_google_sheet(data):
-    """Save user input data to Google Sheets."""
-    sheet = connect_to_google_sheets()
-    if sheet:
-        try:
-            current_date = datetime.now().strftime("%Y-%m-%d")
-            formatted_data = [current_date] + data
-            st.write("Formatted data to save:", formatted_data)  # Debugging log
-            sheet.append_row(formatted_data)
-            st.success("Data saved to Google Sheets successfully!")
-        except Exception as e:
-            st.error(f"Error saving data to Google Sheets: {e}")
 
 # Generate PDF Report
 def generate_pdf(batch_id, data):
@@ -111,6 +79,17 @@ with st.form("input_form"):
     worker_name = st.text_input("Worker Name")
     submit_button = st.form_submit_button("Submit")
 
-    if submit_button:
-        user_data = [batch_id, weight, pressure, temperature, worker_name]
-        save_to_google_sheet(user_data)
+    if submit_button and db:
+        try:
+            data = {
+                "batch_id": batch_id,
+                "weight": weight,
+                "pressure": pressure,
+                "temperature": temperature,
+                "worker_name": worker_name,
+                "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            }
+            db.collection("port_worker_data").add(data)
+            st.success("Data saved to Firebase successfully!")
+        except Exception as e:
+            st.error(f"Error saving data to Firebase: {e}")
