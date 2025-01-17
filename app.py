@@ -39,7 +39,7 @@ def validate_numeric(input_value):
     return bool(re.fullmatch(regex, input_value.strip()))
 
 # Streamlit App
-st.title("Apple Quality Analyzer")
+st.title("Port Worker Quality Checker")
 st.header("Enter Quality Parameters")
 
 # Firebase Initialization
