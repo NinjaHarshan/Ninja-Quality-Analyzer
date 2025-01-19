@@ -23,11 +23,70 @@ def initialize_firebase(cred_dict):
 def generate_pdf(consignment_number, data):
     pdf = FPDF()
     pdf.add_page()
-    pdf.set_font("Arial", size=12)
-    pdf.cell(200, 10, txt=f"Quality Report for Consignment {consignment_number}", ln=True, align="C")
+    
+    # Set title and font
+    pdf.set_font("Arial", 'B', 16)
+    pdf.cell(200, 10, txt=f"Apple Quality Report for Consignment {consignment_number}", ln=True, align="C")
     pdf.ln(10)
-    for key, value in data.items():
-        pdf.cell(200, 10, txt=f"{key}: {value}", ln=True, align="L")
+    
+    # Add a background color to the header
+    pdf.set_fill_color(200, 220, 255)
+    pdf.cell(200, 10, txt="Input Data Summary", ln=True, align="C", fill=True)
+    pdf.ln(5)
+    
+    # Input Data Table
+    pdf.set_font("Arial", size=12)
+    pdf.cell(50, 10, "Consignment Number:", border=1)
+    pdf.cell(0, 10, f"{data['Consignment Number']}", border=1)
+    pdf.ln(10)
+
+    pdf.cell(50, 10, "Inspector Name:", border=1)
+    pdf.cell(0, 10, f"{data['Inspector Name']}", border=1)
+    pdf.ln(10)
+
+    pdf.cell(50, 10, "Timestamp:", border=1)
+    pdf.cell(0, 10, f"{data['Timestamp']}", border=1)
+    pdf.ln(15)
+
+    # Weight, Pressure, and Temperature tables
+    pdf.set_fill_color(240, 240, 240)
+    pdf.cell(50, 10, "Weight (kg)", border=1, fill=True)
+    pdf.cell(0, 10, "Quality Evaluation", border=1, fill=True)
+    pdf.ln(10)
+
+    for weight in data['Weights']:
+        pdf.cell(50, 10, f"{weight} kg", border=1)
+        pdf.cell(0, 10, "Evaluate", border=1)
+        pdf.ln(10)
+
+    pdf.cell(50, 10, "Pressure (kgf/cm²)", border=1, fill=True)
+    pdf.cell(0, 10, "Quality Evaluation", border=1, fill=True)
+    pdf.ln(10)
+
+    for pressure in data['Pressures']:
+        pdf.cell(50, 10, f"{pressure} kgf/cm²", border=1)
+        pdf.cell(0, 10, "Evaluate", border=1)
+        pdf.ln(10)
+
+    pdf.cell(50, 10, "Temperature (°C)", border=1, fill=True)
+    pdf.cell(0, 10, "Quality Evaluation", border=1, fill=True)
+    pdf.ln(10)
+
+    for temperature in data['Temperatures']:
+        pdf.cell(50, 10, f"{temperature} °C", border=1)
+        pdf.cell(0, 10, "Evaluate", border=1)
+        pdf.ln(10)
+
+    # Conclusion Section
+    pdf.set_fill_color(200, 255, 200)
+    pdf.cell(200, 10, txt="Conclusion and Recommendations", ln=True, align="C", fill=True)
+    pdf.ln(5)
+    
+    pdf.set_font("Arial", size=12)
+    pdf.multi_cell(0, 10, txt="Overall evaluation: Good/Bad\nRecommendations: Based on the evaluations above, the apples are suitable for consumption/storage.")
+    pdf.ln(10)
+
+    # Save the PDF
     file_name = f"Consignment_{consignment_number}_Report.pdf"
     pdf.output(file_name)
     return file_name
@@ -46,10 +105,6 @@ st.header("Enter Quality Parameters")
 cred_dict = get_credentials()
 db = initialize_firebase(cred_dict) if cred_dict else None
 
-# Form State Management
-if "weights" not in st.session_state:
-    st.session_state.weights = []
-
 # Form for Inputs
 with st.form("input_form"):
     # Consignment and Inspector Name
@@ -66,27 +121,17 @@ with st.form("input_form"):
         help="Maximum 15 characters.",
     )
 
-    # Number of Boxes
-    num_boxes = st.number_input(
-        "Number of Boxes for Testing",
-        min_value=1,
-        step=1,
-        format="%d",
-        help="Enter the total number of boxes for testing.",
-        key="num_boxes",
-    )
-
-    # Dynamically Create Weight Inputs for each box
+    # Weights (3 mandatory fields)
     st.subheader("Weights")
     weights = []
-    for i in range(num_boxes):
+    for i in range(3):  # Three weight inputs
         weight = st.text_input(
             f"Weight {i + 1} (kg) *",
             placeholder="Enter weight",
             key=f"weight_{i}",
         )
         weights.append(weight)
-
+    
     # Pressure Inputs (3 Mandatory Fields)
     st.subheader("Pressures")
     pressures = []
@@ -98,16 +143,14 @@ with st.form("input_form"):
         )
         pressures.append(pressure)
 
-    # Temperature Inputs (3 Mandatory Fields) - Default is negative
+    # Temperature Inputs (3 Mandatory Fields) - Allow both positive and negative values
     st.subheader("Temperatures")
     temperatures = []
     for i in range(3):
-        # Pre-set temperature to negative sign, user can enter only numbers after it
         temperature = st.text_input(
             f"Temperature {i + 1} (°C) *",
-            placeholder="Enter temperature (in °C, negative by default)",
+            placeholder="Enter temperature (in °C)",
             key=f"temperature_{i}",
-            value="-",  # Display negative sign upfront
         )
         temperatures.append(temperature)
 
@@ -143,7 +186,7 @@ if submit_button:
 
     # Validate Temperature Inputs (No explicit check for negative values)
     for i, temperature in enumerate(temperatures):
-        if not temperature.strip() or temperature == "-":
+        if not temperature.strip():
             errors.append(f"Temperature {i + 1} is mandatory!")
         elif not validate_numeric(temperature):  # Validate as numeric (up to 2 decimals)
             errors.append(f"Temperature {i + 1} must be a valid number!")
@@ -153,13 +196,9 @@ if submit_button:
         for error in errors:
             st.error(error)
     else:
-        # Treat user input as negative value for temperatures (if it's not already a valid number)
-        temperatures = [str(-abs(float(temp))) for temp in temperatures]
-
         data = {
             "Consignment Number": consignment_number,
             "Inspector Name": inspector_name,
-            "Number of Boxes": num_boxes,
             "Weights": weights,
             "Pressures": pressures,
             "Temperatures": temperatures,
