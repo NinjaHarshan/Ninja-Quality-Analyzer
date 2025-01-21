@@ -70,15 +70,15 @@ def weight_remark(weight):
 
 def temp_remark(temp):
     if temp < 0:
-        return "Too cold, risk of frost"
+        return "Stored in cold storage"
     elif 0 <= temp <= 5:
-        return "Good storage temperature"
+        return "Stored in cold storage"
     else:
-        return "Too warm, requires cooling"
+        return "Not stored in cold storage"
 
 def pressure_remark(pressure):
     if pressure < 3:
-        return "Soft, use immediately"
+        return "Ripe, For Short-term use"
     elif 3 <= pressure <= 5:
         return "Ideal for short-term use"
     else:
@@ -152,7 +152,7 @@ class CustomPDF(FPDF):
 
     def add_note_section(self):
         self.set_font("Arial", "I", 10)
-        self.multi_cell(0, 10, "Note: This report is generated based on average values from the consignment.")
+        self.multi_cell(0, 10, "Note: This report is generated based testing 3 boxes from the consignment")
     
     def add_about_us_section(self):
         self.ln(10)  # Add extra space before "About Us"
@@ -167,7 +167,6 @@ class CustomPDF(FPDF):
         self.cell(0, 5, "Email: queries@ninjacart.com", 0, 1, "C")
         self.ln(5)  # Add line break after "About Us"
 
-# PDF Generation Function
 def generate_pdf(consignment_number, data, summary, remarks):
     pdf = CustomPDF()
     pdf.add_page()
@@ -181,9 +180,8 @@ def generate_pdf(consignment_number, data, summary, remarks):
     pdf.ln(5)
 
     pdf.add_summary_table(summary, remarks)
-    pdf.add_note_section()
 
-    # Add dynamic lines below the existing report
+    # Add dynamic lines after the table
     average_weight = sum(data['Weights']) / len(data['Weights'])
     avg_temperature = sum(data['Temperatures']) / len(data['Temperatures'])
     avg_pressure = sum(data['Pressures']) / len(data['Pressures'])
@@ -197,10 +195,15 @@ def generate_pdf(consignment_number, data, summary, remarks):
         f"falling under the '{remarks['Pressure']}' category."
     )
 
-    # Add dynamic lines to the PDF
-    pdf.set_font("Arial", size=12)
-    pdf.multi_cell(0, 10, dynamic_lines)
+    # Add the "Summary:" header and dynamic lines
+    pdf.set_font("Arial", "B", 12)
+    pdf.cell(0, 10, "Summary:", ln=True)  # Bold header for "Summary:"
+    pdf.set_font("Arial", size=10)  # Regular font for the text
+    pdf.multi_cell(0, 5, dynamic_lines)
     pdf.ln(10)
+
+    # Add the note section
+    pdf.add_note_section()
 
     # Add About Us section
     pdf.add_about_us_section()
@@ -221,76 +224,72 @@ db = initialize_firebase(cred_dict) if cred_dict else None
 
 # Form for Inputs
 with st.form("input_form"):
-    buyer_name = st.text_input(
-        "Buyer Name (Optional)",
-        placeholder="Enter buyer name",
-        max_chars=30,
-        help="Maximum 30 characters.",
-    )
+    # Inputs inside the form
     consignment_number = st.text_input(
-        "Consignment Number",
+        "Enter Consignment Number",
         placeholder="Enter consignment number",
         max_chars=10,
         help="Maximum 10 characters.",
     )
     inspector_name = st.text_input(
-        "Inspector Name",
+        "Enter Inspector Name",
         placeholder="Enter inspector name",
         max_chars=15,
         help="Maximum 15 characters.",
     )
+    buyer_name = st.text_input(
+        "Enter Buyer Name",
+        placeholder="Enter buyer name",
+        max_chars=30,
+        help="Maximum 30 characters.",
+    )
 
-    # Weights (3 mandatory fields)
-    weights = []
-    for i in range(3):
-        weight = st.text_input(
-            f"Weight {i + 1} (kg) *",
-            placeholder="Enter weight",
-            key=f"weight_{i}",
-        )
-        weights.append(weight)
+    weights = [
+        st.text_input(f"Enter Weight of Box {i + 1} (kg) *", key=f"weight_{i}")
+        for i in range(3)
+    ]
+    pressures = [
+        st.text_input(f"Enter Pressure of Apple {i + 1} (kgf/cm²) *", key=f"pressure_{i}")
+        for i in range(3)
+    ]
+    temperatures = [
+        st.text_input(f"Enter Temperature of Apple {i + 1} (°C) *", key=f"temperature_{i}")
+        for i in range(3)
+    ]
 
-    # Pressure Inputs (3 Mandatory Fields)
-    pressures = []
-    for i in range(3):
-        pressure = st.text_input(
-            f"Pressure {i + 1} (kgf/cm²) *",
-            placeholder="Enter pressure",
-            key=f"pressure_{i}",
-        )
-        pressures.append(pressure)
-
-    # Temperature Inputs (3 Mandatory Fields)
-    temperatures = []
-    for i in range(3):
-        temperature = st.text_input(
-            f"Temperature {i + 1} (°C) *",
-            placeholder="Enter temperature (in °C)",
-            key=f"temperature_{i}",
-        )
-        temperatures.append(temperature)
-
-    # File Upload
     file = st.file_uploader("Upload Image/Video/PDF (Optional)", type=["jpg", "jpeg", "png", "mp4", "pdf"])
 
-    # Submit Button
+    # Submit button
     submit_button = st.form_submit_button("Submit")
 
-# Validation logic
+# Handle form submission
 if submit_button:
+    # Initialize the errors list
     errors = []
-    # Validate Weight Inputs
-    for i, weight in enumerate(weights):
-        if not weight or not re.match(r'^[\d.]+$', weight):
-            errors.append(f"Invalid input for Weight {i+1}")
-    # Validate Pressure Inputs
-    for i, pressure in enumerate(pressures):
-        if not pressure or not re.match(r'^[\d.]+$', pressure):
-            errors.append(f"Invalid input for Pressure {i+1}")
-    # Validate Temperature Inputs
-    for i, temperature in enumerate(temperatures):
-        if not temperature or not re.match(r'^[\d.]+$', temperature):
-            errors.append(f"Invalid input for Temperature {i+1}")
+
+    # Perform input validation or data checks
+    if not consignment_number:
+        errors.append("Consignment number is required.")
+    if not inspector_name:
+        errors.append("Inspector name is required.")
+    if not buyer_name:
+        errors.append("Buyer name is required.")
+    if len(weights) == 0:
+        errors.append("At least one weight value is required.")
+    if len(pressures) == 0:
+        errors.append("At least one pressure value is required.")
+    if len(temperatures) == 0:
+        errors.append("At least one temperature value is required.")
+
+    # Validate that temperatures are valid numbers (including negative values)
+    for temp in temperatures:
+        try:
+            temp_value = float(temp)
+            # Optional: Check for a reasonable range for temperature
+            if temp_value < -50 or temp_value > 50:
+                errors.append(f"Temperature value {temp} is out of range. Please provide a temperature between -50°C and 50°C.")
+        except ValueError:
+            errors.append(f"Temperature value '{temp}' is not a valid number.")
 
     # Proceed if no errors
     if not errors:
@@ -304,6 +303,11 @@ if submit_button:
             "Pressures": [float(p) for p in pressures],
             "Temperatures": [float(t) for t in temperatures],
         }
+
+        # Store data in Firebase Firestore
+        if db:
+            db.collection('apple_quality_reports').add(data)
+            st.success("Data stored successfully in Firebase!")
 
         summary, remarks = generate_summary(data)
 
@@ -319,7 +323,6 @@ if submit_button:
             file_name=pdf_filename,
             mime="application/pdf",
         )
-
     else:
         # Display the error messages
         st.error("Please correct the following errors:")
