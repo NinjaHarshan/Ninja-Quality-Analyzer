@@ -4,6 +4,7 @@ from fpdf import FPDF
 import re
 import firebase_admin
 from firebase_admin import credentials, firestore
+from io import BytesIO
 
 # Firebase Setup Functions
 def get_credentials():
@@ -19,83 +20,196 @@ def initialize_firebase(cred_dict):
         firebase_admin.initialize_app(cred)
     return firestore.client()
 
+# Helper function for summary
+def generate_summary(data):
+    # Calculate averages
+    average_weight = sum(data['Weights']) / len(data['Weights'])
+    avg_temperature = sum(data['Temperatures']) / len(data['Temperatures'])
+    avg_pressure = sum(data['Pressures']) / len(data['Pressures'])
+# Helper function for summary
+
+    # Temperature categorization logic from second code
+    temp_remarks = "Cold storage" if avg_temperature <= 5 else "Not stored in cold storage"
+    
+    # Pressure categorization logic from second code
+    pressure_remarks = (
+        "Hard" if avg_pressure > 6.35
+        else "Firm" if 5 <= avg_pressure <= 6.35
+        else "Firm Ripe" if 3.65 <= avg_pressure < 5
+        else "Ripe"
+    )
+
+    # Weight remark always as "NA"
+    weight_remark = "NA"
+    
+    # Construct remarks dictionary
+    remarks = {
+        "Weight": weight_remark,
+        "Temperature": temp_remarks,
+        "Pressure": pressure_remarks,
+    }
+
+    # Generate summary message
+    summary = (
+        f"Based on the quality analysis of consignment {data['Consignment Number']}, "
+        f"the average weight is {average_weight:.2f} kg. "
+        f"The average temperature of the apples is {avg_temperature:.2f} °C, "
+        f"falling under the '{temp_remarks}' category. "
+        f"The average pressure is {avg_pressure:.2f} kgf/cm², "
+        f"falling under the '{pressure_remarks}' category.\n\n"
+        f"Recommendations:\n"
+        f"- For long storage, apples should be firm with high pressure.\n"
+        f"- For immediate sale or processing, softer apples may be suitable."
+    )
+
+    return summary, remarks
+
+# Remarks logic for categories
+def weight_remark(weight):
+    return "NA"
+
+def temp_remark(temp):
+    if temp < 0:
+        return "Too cold, risk of frost"
+    elif 0 <= temp <= 5:
+        return "Good storage temperature"
+    else:
+        return "Too warm, requires cooling"
+
+def pressure_remark(pressure):
+    if pressure < 3:
+        return "Soft, use immediately"
+    elif 3 <= pressure <= 5:
+        return "Ideal for short-term use"
+    else:
+        return "Firm, suitable for long-term storage"
+
 # PDF Generation Function
-def generate_pdf(consignment_number, data):
-    pdf = FPDF()
+# Add About Us section method in CustomPDF class
+# PDF Generation Function
+# Add About Us section method in CustomPDF class
+class CustomPDF(FPDF):
+    def header(self):
+        self.set_fill_color(144, 238, 144)  # Parrot Light Green
+        self.rect(0, 0, 210, 40, 'F')  # Full-width header
+        self.image("https://www.ninjacart.com/wp-content/uploads/2023/10/cropped-Group-207-1.png", x=10, y=5, w=190)
+        self.ln(40)
+
+    def footer(self):
+        self.set_y(-15)
+        self.set_font("Arial", "I", 8)
+        self.cell(0, 10, "For queries & bookings, contact: +91 9586954665", align="C")
+
+    def add_main_heading(self, title):
+        self.set_xy(10, 50)
+        self.set_font("Arial", "B", 20)
+        self.cell(190, 10, title, 0, 1, "C")
+        self.ln(10)
+
+    def add_basic_details(self, data):
+        self.set_font("Arial", size=12)
+        self.cell(80, 8, "Consignment Number:", border=1)
+        self.cell(0, 8, data["Consignment Number"], border=1, ln=True)
+
+        self.cell(80, 8, "Inspector Name:", border=1)
+        self.cell(0, 8, data["Inspector Name"], border=1, ln=True)
+
+        self.cell(80, 8, "Buyer Name:", border=1)
+        self.cell(0, 8, data["Buyer Name"], border=1, ln=True)
+
+        self.cell(80, 8, "Timestamp:", border=1)
+        self.cell(0, 8, data["Timestamp"], border=1, ln=True)
+
+        self.ln(10)
+
+    def add_summary_table(self, summary, remarks):
+        self.set_font("Arial", "B", 12)
+        self.set_fill_color(144, 238, 144)
+
+        self.cell(25, 10, "Category", 1, 0, "C", fill=True)
+        self.cell(30, 10, "Average Value", 1, 0, "C", fill=True)
+        self.cell(90, 10, "Reference Range", 1, 0, "C", fill=True)
+        self.cell(25, 10, "Remarks", 1, 1, "C", fill=True)
+
+        self.set_font("Arial", size=10)
+        self.set_fill_color(240, 240, 240)
+
+        categories = ["Weight", "Temperature", "Pressure"]
+        values = [
+            f"{sum(data['Weights']) / len(data['Weights']):.2f} kg",
+            f"{sum(data['Temperatures']) / len(data['Temperatures']):.2f} °C",
+            f"{sum(data['Pressures']) / len(data['Pressures']):.2f} kgf/cm²",
+        ]
+        ranges = ["3.6 kg - 7.5 kg", "-2°C to 5°C", "3 kgf/cm² to 7 kgf/cm²"]
+        
+        for i in range(3):
+            self.cell(25, 10, categories[i], 1, 0, "C", fill=True)
+            self.cell(30, 10, values[i], 1, 0, "C", fill=True)
+            self.cell(90, 10, ranges[i], 1, 0, "C", fill=True)
+            self.cell(25, 10, remarks[categories[i]], 1, 1, "C", fill=True)
+
+        self.ln(10)
+
+    def add_note_section(self):
+        self.set_font("Arial", "I", 10)
+        self.multi_cell(0, 10, "Note: This report is generated based on average values from the consignment.")
+    
+    def add_about_us_section(self):
+        self.ln(10)  # Add extra space before "About Us"
+        self.set_font("Arial", "B", 14)
+        self.cell(0, 5, "About Us", 0, 1, "C")
+        self.set_font("Arial", size=10)
+        self.multi_cell(0, 5, "Ninjacart is an innovative leader in connecting farmers and businesses to deliver fresh, high-quality produce directly to customers. We are committed to providing premium-quality fruits and vegetables with a seamless supply chain experience.")
+        self.ln(5)
+        self.set_font("Arial", "I", 8)
+        self.cell(0, 5, "Address: 2nd Floor Tower E, Helios Business Park, New Horizon College Bus Stop, Service Road, Chandana, Kadubeesanahalli, Bengaluru, 560103", 0, 1, "C")
+        self.cell(0, 5, "Contact: 080 6915 5666, 988 699 9348", 0, 1, "C")
+        self.cell(0, 5, "Email: queries@ninjacart.com", 0, 1, "C")
+        self.ln(5)  # Add line break after "About Us"
+
+# PDF Generation Function
+def generate_pdf(consignment_number, data, summary, remarks):
+    pdf = CustomPDF()
     pdf.add_page()
-    
-    # Set title and font
-    pdf.set_font("Arial", 'B', 16)
-    pdf.cell(200, 10, txt=f"Apple Quality Report for Consignment {consignment_number}", ln=True, align="C")
-    pdf.ln(10)
-    
-    # Add a background color to the header
-    pdf.set_fill_color(200, 220, 255)
-    pdf.cell(200, 10, txt="Input Data Summary", ln=True, align="C", fill=True)
+
+    pdf.add_main_heading("Apple Quality Report")
+    pdf.add_basic_details(data)
+
+    # Add second header "QUALITY REPORT SUMMARY"
+    pdf.set_font("Arial", "B", 14)
+    pdf.cell(0, 10, "QUALITY REPORT SUMMARY", 0, 1, "C")
     pdf.ln(5)
-    
-    # Input Data Table
+
+    pdf.add_summary_table(summary, remarks)
+    pdf.add_note_section()
+
+    # Add dynamic lines below the existing report
+    average_weight = sum(data['Weights']) / len(data['Weights'])
+    avg_temperature = sum(data['Temperatures']) / len(data['Temperatures'])
+    avg_pressure = sum(data['Pressures']) / len(data['Pressures'])
+
+    dynamic_lines = (
+        f"Based on the quality analysis of consignment {data['Consignment Number']}, "
+        f"the average weight is {average_weight:.2f} kg. "
+        f"The average temperature of the apples is {avg_temperature:.2f} °C, "
+        f"falling under the '{remarks['Temperature']}' category. "
+        f"The average pressure is {avg_pressure:.2f} kgf/cm², "
+        f"falling under the '{remarks['Pressure']}' category."
+    )
+
+    # Add dynamic lines to the PDF
     pdf.set_font("Arial", size=12)
-    pdf.cell(50, 10, "Consignment Number:", border=1)
-    pdf.cell(0, 10, f"{data['Consignment Number']}", border=1)
+    pdf.multi_cell(0, 10, dynamic_lines)
     pdf.ln(10)
 
-    pdf.cell(50, 10, "Inspector Name:", border=1)
-    pdf.cell(0, 10, f"{data['Inspector Name']}", border=1)
-    pdf.ln(10)
+    # Add About Us section
+    pdf.add_about_us_section()
 
-    pdf.cell(50, 10, "Timestamp:", border=1)
-    pdf.cell(0, 10, f"{data['Timestamp']}", border=1)
-    pdf.ln(15)
-
-    # Weight, Pressure, and Temperature tables
-    pdf.set_fill_color(240, 240, 240)
-    pdf.cell(50, 10, "Weight (kg)", border=1, fill=True)
-    pdf.cell(0, 10, "Quality Evaluation", border=1, fill=True)
-    pdf.ln(10)
-
-    for weight in data['Weights']:
-        pdf.cell(50, 10, f"{weight} kg", border=1)
-        pdf.cell(0, 10, "Evaluate", border=1)
-        pdf.ln(10)
-
-    pdf.cell(50, 10, "Pressure (kgf/cm²)", border=1, fill=True)
-    pdf.cell(0, 10, "Quality Evaluation", border=1, fill=True)
-    pdf.ln(10)
-
-    for pressure in data['Pressures']:
-        pdf.cell(50, 10, f"{pressure} kgf/cm²", border=1)
-        pdf.cell(0, 10, "Evaluate", border=1)
-        pdf.ln(10)
-
-    pdf.cell(50, 10, "Temperature (°C)", border=1, fill=True)
-    pdf.cell(0, 10, "Quality Evaluation", border=1, fill=True)
-    pdf.ln(10)
-
-    for temperature in data['Temperatures']:
-        pdf.cell(50, 10, f"{temperature} °C", border=1)
-        pdf.cell(0, 10, "Evaluate", border=1)
-        pdf.ln(10)
-
-    # Conclusion Section
-    pdf.set_fill_color(200, 255, 200)
-    pdf.cell(200, 10, txt="Conclusion and Recommendations", ln=True, align="C", fill=True)
-    pdf.ln(5)
-    
-    pdf.set_font("Arial", size=12)
-    pdf.multi_cell(0, 10, txt="Overall evaluation: Good/Bad\nRecommendations: Based on the evaluations above, the apples are suitable for consumption/storage.")
-    pdf.ln(10)
-
-    # Save the PDF
     file_name = f"Consignment_{consignment_number}_Report.pdf"
     pdf.output(file_name)
     return file_name
 
-# Validation Helpers
-def validate_numeric(input_value):
-    # Regex: Allow numbers with optional decimal, but no more than 2 decimals.
-    regex = r"^\-?\d{1,3}(\.\d{0,2})?$"  # Allow negative and up to 2 decimal places
-    return bool(re.fullmatch(regex, input_value.strip()))
+# Continue with the rest of your Streamlit app logic as before.
 
 # Streamlit App
 st.title("Apple Quality Analyzer")
@@ -107,7 +221,12 @@ db = initialize_firebase(cred_dict) if cred_dict else None
 
 # Form for Inputs
 with st.form("input_form"):
-    # Consignment and Inspector Name
+    buyer_name = st.text_input(
+        "Buyer Name (Optional)",
+        placeholder="Enter buyer name",
+        max_chars=30,
+        help="Maximum 30 characters.",
+    )
     consignment_number = st.text_input(
         "Consignment Number",
         placeholder="Enter consignment number",
@@ -122,18 +241,16 @@ with st.form("input_form"):
     )
 
     # Weights (3 mandatory fields)
-    st.subheader("Weights")
     weights = []
-    for i in range(3):  # Three weight inputs
+    for i in range(3):
         weight = st.text_input(
             f"Weight {i + 1} (kg) *",
             placeholder="Enter weight",
             key=f"weight_{i}",
         )
         weights.append(weight)
-    
+
     # Pressure Inputs (3 Mandatory Fields)
-    st.subheader("Pressures")
     pressures = []
     for i in range(3):
         pressure = st.text_input(
@@ -143,8 +260,7 @@ with st.form("input_form"):
         )
         pressures.append(pressure)
 
-    # Temperature Inputs (3 Mandatory Fields) - Allow both positive and negative values
-    st.subheader("Temperatures")
+    # Temperature Inputs (3 Mandatory Fields)
     temperatures = []
     for i in range(3):
         temperature = st.text_input(
@@ -160,69 +276,52 @@ with st.form("input_form"):
     # Submit Button
     submit_button = st.form_submit_button("Submit")
 
-# Real-time validation logic
+# Validation logic
 if submit_button:
     errors = []
-
-    # Validate Consignment and Inspector Name
-    if not consignment_number.strip():
-        errors.append("Consignment Number is mandatory!")
-    if not inspector_name.strip():
-        errors.append("Inspector Name is mandatory!")
-
     # Validate Weight Inputs
     for i, weight in enumerate(weights):
-        if not weight.strip():
-            errors.append(f"Weight {i + 1} is mandatory!")
-        elif not validate_numeric(weight):  # Validate as numeric (up to 2 decimals)
-            errors.append(f"Weight {i + 1} must be a valid number!")
-
+        if not weight or not re.match(r'^[\d.]+$', weight):
+            errors.append(f"Invalid input for Weight {i+1}")
     # Validate Pressure Inputs
     for i, pressure in enumerate(pressures):
-        if not pressure.strip():
-            errors.append(f"Pressure {i + 1} is mandatory!")
-        elif not validate_numeric(pressure):  # Validate as numeric (up to 2 decimals)
-            errors.append(f"Pressure {i + 1} must be a valid number!")
-
-    # Validate Temperature Inputs (No explicit check for negative values)
+        if not pressure or not re.match(r'^[\d.]+$', pressure):
+            errors.append(f"Invalid input for Pressure {i+1}")
+    # Validate Temperature Inputs
     for i, temperature in enumerate(temperatures):
-        if not temperature.strip():
-            errors.append(f"Temperature {i + 1} is mandatory!")
-        elif not validate_numeric(temperature):  # Validate as numeric (up to 2 decimals)
-            errors.append(f"Temperature {i + 1} must be a valid number!")
+        if not temperature or not re.match(r'^[\d.]+$', temperature):
+            errors.append(f"Invalid input for Temperature {i+1}")
 
-    # Show Errors or Process Form
-    if errors:
-        for error in errors:
-            st.error(error)
-    else:
+    # Proceed if no errors
+    if not errors:
+        # Prepare data for processing
         data = {
             "Consignment Number": consignment_number,
             "Inspector Name": inspector_name,
-            "Weights": weights,
-            "Pressures": pressures,
-            "Temperatures": temperatures,
+            "Buyer Name": buyer_name,
             "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "Weights": [float(w) for w in weights],
+            "Pressures": [float(p) for p in pressures],
+            "Temperatures": [float(t) for t in temperatures],
         }
-        if file:
-            data["Uploaded File"] = file.name
 
-        # Save to Firebase
-        if db:
-            db.collection("port_worker_data").add(data)
-            st.success("Data submitted successfully!")
+        summary, remarks = generate_summary(data)
 
-        # Generate and save PDF
-        report_file = generate_pdf(consignment_number, data)
-        if report_file:
-            with open(report_file, "rb") as f:
-                # Move download button outside the form
-                st.download_button(
-                    label="Download Report",
-                    data=f,
-                    file_name=report_file,
-                    mime="application/pdf",
-                )
-        # Hide the form and show report generation section only
-        st.empty()
-        st.success("Form submitted successfully! The report is being generated.")
+        # Generate PDF report
+        pdf_filename = generate_pdf(consignment_number, data, summary, remarks)
+
+        # Display the summary and link to the PDF report
+        st.success("Quality Report Generated Successfully!")
+        st.write(summary)
+        st.download_button(
+            label="Download Quality Report PDF",
+            data=open(pdf_filename, "rb").read(),
+            file_name=pdf_filename,
+            mime="application/pdf",
+        )
+
+    else:
+        # Display the error messages
+        st.error("Please correct the following errors:")
+        for error in errors:
+            st.write(error)
