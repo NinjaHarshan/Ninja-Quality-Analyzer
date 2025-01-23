@@ -1,10 +1,8 @@
 import streamlit as st
 from datetime import datetime
 from fpdf import FPDF
-import re
 import firebase_admin
 from firebase_admin import credentials, firestore
-from io import BytesIO
 
 # Firebase Setup Functions
 def get_credentials():
@@ -26,12 +24,11 @@ def generate_summary(data):
     average_weight = sum(data['Weights']) / len(data['Weights'])
     avg_temperature = sum(data['Temperatures']) / len(data['Temperatures'])
     avg_pressure = sum(data['Pressures']) / len(data['Pressures'])
-# Helper function for summary
-
-    # Temperature categorization logic from second code
-    temp_remarks = "Cold storage" if avg_temperature <= 5 else "Not stored in cold storage"
     
-    # Pressure categorization logic from second code
+    # Temperature categorization logic
+    temp_remarks = "Cold storage" if avg_temperature <= 5 else "Non-refrigerated storage"
+    
+    # Pressure categorization logic
     pressure_remarks = (
         "Hard" if avg_pressure > 6.35
         else "Firm" if 5 <= avg_pressure <= 6.35
@@ -51,42 +48,18 @@ def generate_summary(data):
 
     # Generate summary message
     summary = (
-        f"Based on the quality analysis of consignment {data['Consignment Number']}, "
-        f"the average weight is {average_weight:.2f} kg. "
-        f"The average temperature of the apples is {avg_temperature:.2f} °C, "
-        f"falling under the '{temp_remarks}' category. "
-        f"The average pressure is {avg_pressure:.2f} kgf/cm², "
-        f"falling under the '{pressure_remarks}' category.\n\n"
-        f"Recommendations:\n"
-        f"- For long storage, apples should be firm with high pressure.\n"
-        f"- For immediate sale or processing, softer apples may be suitable."
+        f"The consignment {data['Consignment Number']}, "
+        f"inspected by {data['Inspector Name']} "
+        f"on {data['Timestamp']}, "
+        f"had an average crate weight of {average_weight:.2f} kg. "
+        f"The recorded average temperature was {avg_temperature:.2f} °C, "
+        f"indicating it was stored in '{temp_remarks}' at the time of inspection. "
+        f"Additionally, the average pressure was measured at {avg_pressure:.2f} kgf/cm², "
+        f"signifying that the consignment is '{pressure_remarks}'."
     )
 
     return summary, remarks
 
-# Remarks logic for categories
-def weight_remark(weight):
-    return "NA"
-
-def temp_remark(temp):
-    if temp < 0:
-        return "Stored in cold storage"
-    elif 0 <= temp <= 5:
-        return "Stored in cold storage"
-    else:
-        return "Not stored in cold storage"
-
-def pressure_remark(pressure):
-    if pressure < 3:
-        return "Ripe, For Short-term use"
-    elif 3 <= pressure <= 5:
-        return "Ideal for short-term use"
-    else:
-        return "Firm, suitable for long-term storage"
-
-# PDF Generation Function
-# Add About Us section method in CustomPDF class
-# PDF Generation Function
 # Add About Us section method in CustomPDF class
 class CustomPDF(FPDF):
     def header(self):
@@ -96,59 +69,94 @@ class CustomPDF(FPDF):
         self.ln(40)
 
     def footer(self):
-        self.set_y(-15)
+        self.set_y(-30)  # Move the footer up to make space for the address
         self.set_font("Arial", "I", 8)
+        self.cell(0, 5, "Address: 2nd Floor Tower E, Helios Business Park, New Horizon College Bus Stop, Service Road, Chandana, Kadubeesanahalli, Bengaluru, 560103", 0, 1, "C")
         self.cell(0, 10, "For queries & bookings, contact: +91 9586954665", align="C")
 
     def add_main_heading(self, title):
         self.set_xy(10, 50)
         self.set_font("Arial", "B", 20)
         self.cell(190, 10, title, 0, 1, "C")
-        self.ln(10)
+        self.ln(5)  # Reduced space
 
     def add_basic_details(self, data):
         self.set_font("Arial", size=12)
-        self.cell(80, 8, "Consignment Number:", border=1)
-        self.cell(0, 8, data["Consignment Number"], border=1, ln=True)
+        
+        info_types = ["Consignment Number", "Inspector Name", "Apple Variety", "Apple Color", "Crate Type", "Timestamp"]
+        values = [data["Consignment Number"], data["Inspector Name"], data["Apple Variety"], data["Apple Color"], data["Crate Type"], data["Timestamp"]]
 
-        self.cell(80, 8, "Inspector Name:", border=1)
-        self.cell(0, 8, data["Inspector Name"], border=1, ln=True)
+        for info, value in zip(info_types, values):
+            self.set_fill_color(255, 165, 0)  # Orange background color
+            self.cell(45, 8, info + ":", border=1, fill=True)
+            self.cell(0, 8, value, border=1, ln=True)
 
-        self.cell(80, 8, "Buyer Name:", border=1)
-        self.cell(0, 8, data["Buyer Name"], border=1, ln=True)
+        self.ln(5)  # Reduced space
 
-        self.cell(80, 8, "Timestamp:", border=1)
-        self.cell(0, 8, data["Timestamp"], border=1, ln=True)
-
-        self.ln(10)
-
-    def add_summary_table(self, summary, remarks):
+    def add_summary_table(self, data, summary, remarks):
         self.set_font("Arial", "B", 12)
         self.set_fill_color(144, 238, 144)
 
-        self.cell(25, 10, "Category", 1, 0, "C", fill=True)
-        self.cell(30, 10, "Average Value", 1, 0, "C", fill=True)
-        self.cell(90, 10, "Reference Range", 1, 0, "C", fill=True)
-        self.cell(25, 10, "Remarks", 1, 1, "C", fill=True)
+        # Define column widths
+        col_widths = {
+            "category": 25,  # Reduced from 30
+            "values": 35,    # Reduced from 40
+            "avg_value": 30,
+            "reference_range": 60,
+            "remarks": 40    # Increased from 30
+        }
+
+        # Column headers
+        self.cell(col_widths["category"], 10, "Category", 1, 0, "C", fill=True)
+        self.cell(col_widths["values"], 10, "Values", 1, 0, "C", fill=True)
+        self.cell(col_widths["avg_value"], 10, "Average Value", 1, 0, "C", fill=True)
+        self.cell(col_widths["reference_range"], 10, "Reference Range", 1, 0, "C", fill=True)
+        self.cell(col_widths["remarks"], 10, "Remarks", 1, 1, "C", fill=True)
 
         self.set_font("Arial", size=10)
         self.set_fill_color(240, 240, 240)
 
         categories = ["Weight", "Temperature", "Pressure"]
         values = [
+            '\n'.join(f"{w} kg" for w in data['Weights']),
+            '\n'.join(f"{t} °C" for t in data['Temperatures']),
+            '\n'.join(f"{p} kgf/cm²" for p in data['Pressures'])
+        ]
+        avg_values = [
             f"{sum(data['Weights']) / len(data['Weights']):.2f} kg",
             f"{sum(data['Temperatures']) / len(data['Temperatures']):.2f} °C",
             f"{sum(data['Pressures']) / len(data['Pressures']):.2f} kgf/cm²",
         ]
-        ranges = ["3.6 kg - 7.5 kg", "-2°C to 5°C", "3 kgf/cm² to 7 kgf/cm²"]
-        
-        for i in range(3):
-            self.cell(25, 10, categories[i], 1, 0, "C", fill=True)
-            self.cell(30, 10, values[i], 1, 0, "C", fill=True)
-            self.cell(90, 10, ranges[i], 1, 0, "C", fill=True)
-            self.cell(25, 10, remarks[categories[i]], 1, 1, "C", fill=True)
+        ranges = [
+            "NA",
+            "-2°C to 5°C - Cold storage\n> 5°C - Non-refrigerated storage",
+            "> 6.35 - Hard\n5 to 6.35 - Firm\n3.65 to 5 - Firm Ripe\n< 3.65 - Ripe"
+        ]
 
-        self.ln(10)
+        for i in range(3):
+            # Calculate the maximum number of lines in the cells for the current row
+            value_lines = len(values[i].split('\n'))
+            range_lines = len(ranges[i].split('\n'))
+            remark_lines = len(remarks[categories[i]].split('\n'))
+            max_lines = max(value_lines, range_lines, remark_lines)
+            cell_height = 5 * max_lines  # Adjust line height
+
+            # Print cells, ensuring the same height for all cells in the row
+            self.cell(col_widths["category"], cell_height, categories[i], 1, 0, "C", fill=True)
+            
+            x, y = self.get_x(), self.get_y()
+            self.multi_cell(col_widths["values"], cell_height / value_lines, values[i], border=1, align="C", fill=True)
+            self.set_xy(x + col_widths["values"], y)
+            
+            self.cell(col_widths["avg_value"], cell_height, avg_values[i], 1, 0, "C", fill=True)
+            
+            x, y = self.get_x(), self.get_y()
+            self.multi_cell(col_widths["reference_range"], cell_height / range_lines, ranges[i], border=1, align="C", fill=True)
+            self.set_xy(x + col_widths["reference_range"], y)
+            
+            self.cell(col_widths["remarks"], cell_height, remarks[categories[i]], 1, 1, "C", fill=True)
+
+        self.ln(5)  # Reduced space
 
     def add_note_section(self):
         self.set_font("Arial", "I", 10)
@@ -156,15 +164,8 @@ class CustomPDF(FPDF):
     
     def add_about_us_section(self):
         self.ln(10)  # Add extra space before "About Us"
-        self.set_font("Arial", "B", 14)
-        self.cell(0, 5, "About Us", 0, 1, "C")
-        self.set_font("Arial", size=10)
-        self.multi_cell(0, 5, "Ninjacart is an innovative leader in connecting farmers and businesses to deliver fresh, high-quality produce directly to customers. We are committed to providing premium-quality fruits and vegetables with a seamless supply chain experience.")
-        self.ln(5)
         self.set_font("Arial", "I", 8)
         self.cell(0, 5, "Address: 2nd Floor Tower E, Helios Business Park, New Horizon College Bus Stop, Service Road, Chandana, Kadubeesanahalli, Bengaluru, 560103", 0, 1, "C")
-        self.cell(0, 5, "Contact: 080 6915 5666, 988 699 9348", 0, 1, "C")
-        self.cell(0, 5, "Email: queries@ninjacart.com", 0, 1, "C")
         self.ln(5)  # Add line break after "About Us"
 
 def generate_pdf(consignment_number, data, summary, remarks):
@@ -179,7 +180,7 @@ def generate_pdf(consignment_number, data, summary, remarks):
     pdf.cell(0, 10, "QUALITY REPORT SUMMARY", 0, 1, "C")
     pdf.ln(5)
 
-    pdf.add_summary_table(summary, remarks)
+    pdf.add_summary_table(data, summary, remarks)
 
     # Add dynamic lines after the table
     average_weight = sum(data['Weights']) / len(data['Weights'])
@@ -187,12 +188,14 @@ def generate_pdf(consignment_number, data, summary, remarks):
     avg_pressure = sum(data['Pressures']) / len(data['Pressures'])
 
     dynamic_lines = (
-        f"Based on the quality analysis of consignment {data['Consignment Number']}, "
-        f"the average weight is {average_weight:.2f} kg. "
-        f"The average temperature of the apples is {avg_temperature:.2f} °C, "
-        f"falling under the '{remarks['Temperature']}' category. "
-        f"The average pressure is {avg_pressure:.2f} kgf/cm², "
-        f"falling under the '{remarks['Pressure']}' category."
+        f"The consignment {data['Consignment Number']}, "
+        f"inspected by {data['Inspector Name']} "
+        f"on {data['Timestamp']}, "
+        f"had an average crate weight of {average_weight:.2f} kg. "
+        f"The recorded average temperature was {avg_temperature:.2f} °C, "
+        f"indicating it was stored in '{remarks['Temperature']}' at the time of inspection. "
+        f"Additionally, the average pressure was measured at {avg_pressure:.2f} kgf/cm², "
+        f"signifying that the consignment is '{remarks['Pressure']}'."
     )
 
     # Add the "Summary:" header and dynamic lines
@@ -200,7 +203,7 @@ def generate_pdf(consignment_number, data, summary, remarks):
     pdf.cell(0, 10, "Summary:", ln=True)  # Bold header for "Summary:"
     pdf.set_font("Arial", size=10)  # Regular font for the text
     pdf.multi_cell(0, 5, dynamic_lines)
-    pdf.ln(10)
+    pdf.ln(5)
 
     # Add the note section
     pdf.add_note_section()
@@ -212,8 +215,6 @@ def generate_pdf(consignment_number, data, summary, remarks):
     pdf.output(file_name)
     return file_name
 
-# Continue with the rest of your Streamlit app logic as before.
-
 # Streamlit App
 st.title("Apple Quality Analyzer")
 st.header("Enter Quality Parameters")
@@ -221,6 +222,17 @@ st.header("Enter Quality Parameters")
 # Firebase Initialization
 cred_dict = get_credentials()
 db = initialize_firebase(cred_dict) if cred_dict else None
+
+# Button to reset session state
+if st.button("Reset Form"):
+    for key in st.session_state.keys():
+        del st.session_state[key]
+
+# Initialize or reset session state for dynamic crate options
+if 'apple_variety' not in st.session_state:
+    st.session_state.apple_variety = "I-Apple"
+if 'crate_type' not in st.session_state:
+    st.session_state.crate_type = "White Crate"
 
 # Form for Inputs
 with st.form("input_form"):
@@ -237,12 +249,32 @@ with st.form("input_form"):
         max_chars=15,
         help="Maximum 15 characters.",
     )
-    buyer_name = st.text_input(
-        "Enter Buyer Name",
-        placeholder="Enter buyer name",
-        max_chars=30,
-        help="Maximum 30 characters.",
+    
+    # New Inputs
+    apple_variety = st.selectbox(
+        "Choose the Apple Variety",
+        ["I-Apple", "Turkey - Apple"],
+        index=0 if st.session_state.apple_variety is None else ["I-Apple", "Turkey - Apple"].index(st.session_state.apple_variety),
+        key='apple_variety'
     )
+    
+    apple_color = st.selectbox(
+        "Choose Apple Color",
+        ["Red", "Dark Red", "Light Red"]
+    )
+    
+    if st.session_state.apple_variety == "I-Apple":
+        crate_type = st.selectbox(
+            "Choose Crate Type",
+            ["White Crate", "Green Crate"],
+            key='crate_type'
+        )
+    else:
+        crate_type = st.selectbox(
+            "Choose Crate Type",
+            ["Yellow Crate", "Red Crate"],
+            key='crate_type'
+        )
 
     weights = [
         st.text_input(f"Enter Weight of Box {i + 1} (kg) *", key=f"weight_{i}")
@@ -272,16 +304,26 @@ if submit_button:
         errors.append("Consignment number is required.")
     if not inspector_name:
         errors.append("Inspector name is required.")
-    if not buyer_name:
-        errors.append("Buyer name is required.")
-    if len(weights) == 0:
-        errors.append("At least one weight value is required.")
-    if len(pressures) == 0:
-        errors.append("At least one pressure value is required.")
-    if len(temperatures) == 0:
-        errors.append("At least one temperature value is required.")
+    if not all(weights):
+        errors.append("All weight values are required.")
+    if not all(pressures):
+        errors.append("All pressure values are required.")
+    if not all(temperatures):
+        errors.append("All temperature values are required.")
 
-    # Validate that temperatures are valid numbers (including negative values)
+    # Validate that weights, pressures, and temperatures are valid numbers
+    for weight in weights:
+        try:
+            float(weight)
+        except ValueError:
+            errors.append(f"Weight value '{weight}' is not a valid number.")
+    
+    for pressure in pressures:
+        try:
+            float(pressure)
+        except ValueError:
+            errors.append(f"Pressure value '{pressure}' is not a valid number.")
+    
     for temp in temperatures:
         try:
             temp_value = float(temp)
@@ -291,13 +333,21 @@ if submit_button:
         except ValueError:
             errors.append(f"Temperature value '{temp}' is not a valid number.")
 
+    # Validate if the crate type matches the apple variety
+    if st.session_state.apple_variety == "I-Apple" and st.session_state.crate_type not in ["White Crate", "Green Crate"]:
+        errors.append("Selected crate type does not match the I-Apple variety. Please select either White Crate or Green Crate.")
+    elif st.session_state.apple_variety == "Turkey - Apple" and st.session_state.crate_type not in ["Yellow Crate", "Red Crate"]:
+        errors.append("Selected crate type does not match the Turkey - Apple variety. Please select either Yellow Crate or Red Crate.")
+
     # Proceed if no errors
     if not errors:
         # Prepare data for processing
         data = {
             "Consignment Number": consignment_number,
             "Inspector Name": inspector_name,
-            "Buyer Name": buyer_name,
+            "Apple Variety": st.session_state.apple_variety,
+            "Apple Color": apple_color,
+            "Crate Type": st.session_state.crate_type,
             "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "Weights": [float(w) for w in weights],
             "Pressures": [float(p) for p in pressures],
@@ -323,6 +373,10 @@ if submit_button:
             file_name=pdf_filename,
             mime="application/pdf",
         )
+
+        # Clear session state to prompt user input again
+        for key in st.session_state.keys():
+            del st.session_state[key]
     else:
         # Display the error messages
         st.error("Please correct the following errors:")
