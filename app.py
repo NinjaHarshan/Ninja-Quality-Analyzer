@@ -169,9 +169,9 @@ def generate_pdf(consignment_number, data, summary, remarks):
     pdf.add_main_heading("Apple Quality Report")
     pdf.add_basic_details(data)
 
-    # Add second header "QUALITY REPORT SUMMARY"
+    # Add second header "Summary"
     pdf.set_font("Arial", "B", 14)
-    pdf.cell(0, 10, "QUALITY REPORT SUMMARY", 0, 1, "C")
+    pdf.cell(0, 10, "Summary", 0, 1, "C")
     pdf.ln(5)
 
     pdf.add_summary_table(data, summary, remarks)
@@ -192,9 +192,9 @@ def generate_pdf(consignment_number, data, summary, remarks):
         f"signifying that the consignment is '{remarks['Pressure']}'."
     )
 
-    # Add the "Summary:" header and dynamic lines
+    # Add the "Overview of Results:" header and dynamic lines
     pdf.set_font("Arial", "B", 12)
-    pdf.cell(0, 10, "Summary:", ln=True)  # Bold header for "Summary:"
+    pdf.cell(0, 10, "Overview of Results:", ln=True)  # Bold header for "Overview of Results:"
     pdf.set_font("Arial", size=10)  # Regular font for the text
     pdf.multi_cell(0, 5, dynamic_lines)
     pdf.ln(5)
@@ -220,8 +220,8 @@ with st.form("input_form"):
     consignment_number = st.text_input(
         "Enter Consignment Number",
         placeholder="Enter consignment number",
-        max_chars=10,
-        help="Maximum 10 characters.",
+        max_chars=30,
+        help="Maximum 30 characters.",
     )
     inspector_name = st.text_input(
         "Enter Inspector Name",
@@ -243,24 +243,12 @@ with st.form("input_form"):
         ["", "Red", "Dark Red", "Light Red"]
     )
     
-    if st.session_state.apple_variety == "I-Apple":
-        crate_type = st.selectbox(
-            "Choose Crate Type",
-            ["", "White Crate", "Green Crate"],
-            key='crate_type'
-        )
-    elif st.session_state.apple_variety == "Turkey - Apple":
-        crate_type = st.selectbox(
-            "Choose Crate Type",
-            ["", "Yellow Crate", "Red Crate"],
-            key='crate_type'
-        )
-    else:
-        crate_type = st.selectbox(
-            "Choose Crate Type",
-            ["", "White Crate", "Green Crate", "Yellow Crate", "Red Crate"],
-            key='crate_type'
-        )
+    crate_type = st.selectbox(
+        "Choose Crate Type",
+        ["", "White Crate", "Green Crate"],
+        index=0,
+        key='crate_type'
+    )
 
     weights = [
         st.text_input(f"Enter Weight of Box {i + 1} (kg) *", key=f"weight_{i}")
