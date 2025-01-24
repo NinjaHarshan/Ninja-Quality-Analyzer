@@ -60,7 +60,7 @@ def generate_summary(data):
 
     return summary, remarks
 
-# Add About Us section method in CustomPDF class
+# CustomPDF class definition
 class CustomPDF(FPDF):
     def header(self):
         self.set_fill_color(144, 238, 144)  # Parrot Light Green
@@ -87,7 +87,7 @@ class CustomPDF(FPDF):
         values = [data["Consignment Number"], data["Inspector Name"], data["Apple Variety"], data["Apple Color"], data["Crate Type"], data["Timestamp"]]
 
         for info, value in zip(info_types, values):
-            self.set_fill_color(255, 165, 0)  # Orange background color
+            self.set_fill_color(255, 200, 0)  # Light Orange background color
             self.cell(45, 8, info + ":", border=1, fill=True)
             self.cell(0, 8, value, border=1, ln=True)
 
@@ -161,12 +161,6 @@ class CustomPDF(FPDF):
     def add_note_section(self):
         self.set_font("Arial", "I", 10)
         self.multi_cell(0, 10, "Note: This report is generated based testing 3 boxes from the consignment")
-    
-    def add_about_us_section(self):
-        self.ln(10)  # Add extra space before "About Us"
-        self.set_font("Arial", "I", 8)
-        self.cell(0, 5, "Address: 2nd Floor Tower E, Helios Business Park, New Horizon College Bus Stop, Service Road, Chandana, Kadubeesanahalli, Bengaluru, 560103", 0, 1, "C")
-        self.ln(5)  # Add line break after "About Us"
 
 def generate_pdf(consignment_number, data, summary, remarks):
     pdf = CustomPDF()
@@ -208,9 +202,6 @@ def generate_pdf(consignment_number, data, summary, remarks):
     # Add the note section
     pdf.add_note_section()
 
-    # Add About Us section
-    pdf.add_about_us_section()
-
     file_name = f"Consignment_{consignment_number}_Report.pdf"
     pdf.output(file_name)
     return file_name
@@ -222,17 +213,6 @@ st.header("Enter Quality Parameters")
 # Firebase Initialization
 cred_dict = get_credentials()
 db = initialize_firebase(cred_dict) if cred_dict else None
-
-# Button to reset session state
-if st.button("Reset Form"):
-    for key in st.session_state.keys():
-        del st.session_state[key]
-
-# Initialize or reset session state for dynamic crate options
-if 'apple_variety' not in st.session_state:
-    st.session_state.apple_variety = "I-Apple"
-if 'crate_type' not in st.session_state:
-    st.session_state.crate_type = "White Crate"
 
 # Form for Inputs
 with st.form("input_form"):
@@ -253,26 +233,32 @@ with st.form("input_form"):
     # New Inputs
     apple_variety = st.selectbox(
         "Choose the Apple Variety",
-        ["I-Apple", "Turkey - Apple"],
-        index=0 if st.session_state.apple_variety is None else ["I-Apple", "Turkey - Apple"].index(st.session_state.apple_variety),
+        ["", "I-Apple", "Turkey - Apple"],
+        index=0,
         key='apple_variety'
     )
     
     apple_color = st.selectbox(
         "Choose Apple Color",
-        ["Red", "Dark Red", "Light Red"]
+        ["", "Red", "Dark Red", "Light Red"]
     )
     
     if st.session_state.apple_variety == "I-Apple":
         crate_type = st.selectbox(
             "Choose Crate Type",
-            ["White Crate", "Green Crate"],
+            ["", "White Crate", "Green Crate"],
+            key='crate_type'
+        )
+    elif st.session_state.apple_variety == "Turkey - Apple":
+        crate_type = st.selectbox(
+            "Choose Crate Type",
+            ["", "Yellow Crate", "Red Crate"],
             key='crate_type'
         )
     else:
         crate_type = st.selectbox(
             "Choose Crate Type",
-            ["Yellow Crate", "Red Crate"],
+            ["", "White Crate", "Green Crate", "Yellow Crate", "Red Crate"],
             key='crate_type'
         )
 
@@ -304,6 +290,12 @@ if submit_button:
         errors.append("Consignment number is required.")
     if not inspector_name:
         errors.append("Inspector name is required.")
+    if not apple_variety:
+        errors.append("Apple variety is required.")
+    if not apple_color:
+        errors.append("Apple color is required.")
+    if not crate_type:
+        errors.append("Crate type is required.")
     if not all(weights):
         errors.append("All weight values are required.")
     if not all(pressures):
@@ -333,21 +325,15 @@ if submit_button:
         except ValueError:
             errors.append(f"Temperature value '{temp}' is not a valid number.")
 
-    # Validate if the crate type matches the apple variety
-    if st.session_state.apple_variety == "I-Apple" and st.session_state.crate_type not in ["White Crate", "Green Crate"]:
-        errors.append("Selected crate type does not match the I-Apple variety. Please select either White Crate or Green Crate.")
-    elif st.session_state.apple_variety == "Turkey - Apple" and st.session_state.crate_type not in ["Yellow Crate", "Red Crate"]:
-        errors.append("Selected crate type does not match the Turkey - Apple variety. Please select either Yellow Crate or Red Crate.")
-
     # Proceed if no errors
     if not errors:
         # Prepare data for processing
         data = {
             "Consignment Number": consignment_number,
             "Inspector Name": inspector_name,
-            "Apple Variety": st.session_state.apple_variety,
+            "Apple Variety": apple_variety,
             "Apple Color": apple_color,
-            "Crate Type": st.session_state.crate_type,
+            "Crate Type": crate_type,
             "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             "Weights": [float(w) for w in weights],
             "Pressures": [float(p) for p in pressures],
@@ -375,7 +361,7 @@ if submit_button:
         )
 
         # Clear session state to prompt user input again
-        for key in st.session_state.keys():
+        for key in list(st.session_state.keys()):
             del st.session_state[key]
     else:
         # Display the error messages
