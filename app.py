@@ -254,12 +254,12 @@ with st.form("input_form"):
         st.text_input(f"Enter Weight of Box {i + 1} (kg) *", key=f"weight_{i}")
         for i in range(3)
     ]
-    pressures = [
-        st.text_input(f"Enter Pressure of Apple {i + 1} (kgf/cm²) *", key=f"pressure_{i}")
-        for i in range(3)
-    ]
     temperatures = [
         st.text_input(f"Enter Temperature of Apple {i + 1} (°C) *", key=f"temperature_{i}")
+        for i in range(3)
+    ]
+    pressures = [
+        st.text_input(f"Enter Pressure of Apple {i + 1} (kgf/cm²) *", key=f"pressure_{i}")
         for i in range(3)
     ]
 
@@ -286,32 +286,29 @@ if submit_button:
         errors.append("Crate type is required.")
     if not all(weights):
         errors.append("All weight values are required.")
-    if not all(pressures):
-        errors.append("All pressure values are required.")
     if not all(temperatures):
         errors.append("All temperature values are required.")
+    if not all(pressures):
+        errors.append("All pressure values are required.")
 
-    # Validate that weights, pressures, and temperatures are valid numbers
+    # Validate that weights, temperatures, and pressures are valid numbers
     for weight in weights:
         try:
             float(weight)
         except ValueError:
             errors.append(f"Weight value '{weight}' is not a valid number.")
     
+    for temp in temperatures:
+        try:
+            float(temp)
+        except ValueError:
+            errors.append(f"Temperature value '{temp}' is not a valid number.")
+    
     for pressure in pressures:
         try:
             float(pressure)
         except ValueError:
             errors.append(f"Pressure value '{pressure}' is not a valid number.")
-    
-    for temp in temperatures:
-        try:
-            temp_value = float(temp)
-            # Optional: Check for a reasonable range for temperature
-            if temp_value < -50 or temp_value > 50:
-                errors.append(f"Temperature value {temp} is out of range. Please provide a temperature between -50°C and 50°C.")
-        except ValueError:
-            errors.append(f"Temperature value '{temp}' is not a valid number.")
 
     # Proceed if no errors
     if not errors:
