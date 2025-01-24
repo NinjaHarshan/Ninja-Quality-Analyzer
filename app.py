@@ -325,6 +325,9 @@ if submit_button:
 
     # Proceed if no errors
     if not errors:
+        # Convert current time to IST
+        ist_timestamp = convert_utc_to_ist(datetime.utcnow())
+
         # Prepare data for processing
         data = {
             "Consignment Number": consignment_number,
@@ -332,7 +335,7 @@ if submit_button:
             "Apple Variety": apple_variety,
             "Apple Color": apple_color,
             "Crate Type": crate_type,
-            "Timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "Timestamp": ist_timestamp.strftime("%Y-%m-%d %H:%M:%S"),
             "Weights": [float(w) for w in weights],
             "Pressures": [float(p) for p in pressures],
             "Temperatures": [float(t) for t in temperatures],
