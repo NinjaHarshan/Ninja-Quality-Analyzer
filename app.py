@@ -3,6 +3,15 @@ from datetime import datetime
 from fpdf import FPDF
 import firebase_admin
 from firebase_admin import credentials, firestore
+import pytz  # Import pytz for timezone conversion
+
+# Function to convert UTC to IST
+def convert_utc_to_ist(utc_datetime):
+    utc_zone = pytz.utc
+    ist_zone = pytz.timezone('Asia/Kolkata')
+    utc_datetime = utc_zone.localize(utc_datetime)
+    ist_datetime = utc_datetime.astimezone(ist_zone)
+    return ist_datetime
 
 # Firebase Setup Functions
 def get_credentials():
@@ -46,11 +55,15 @@ def generate_summary(data):
         "Pressure": pressure_remarks,
     }
 
+    # Convert UTC timestamp to IST
+    timestamp_utc = datetime.strptime(data['Timestamp'], "%Y-%m-%d %H:%M:%S")
+    timestamp_ist = convert_utc_to_ist(timestamp_utc)
+
     # Generate summary message
     summary = (
         f"The consignment {data['Consignment Number']}, "
         f"inspected by {data['Inspector Name']} "
-        f"on {data['Timestamp']}, "
+        f"on {timestamp_ist.strftime('%Y-%m-%d %H:%M:%S')}, "
         f"had an average crate weight of {average_weight:.2f} kg. "
         f"The recorded average temperature was {avg_temperature:.2f} °C, "
         f"indicating it was stored in '{temp_remarks}' at the time of inspection. "
