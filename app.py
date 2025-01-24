@@ -207,8 +207,8 @@ def generate_pdf(consignment_number, data, summary, remarks):
     return file_name
 
 # Streamlit App
-st.title("Apple Quality Analyzer")
-st.header("Enter Quality Parameters")
+st.title("Ninja Apple Quality Inspection")
+#st.header("Enter Quality Parameters")
 
 # Firebase Initialization
 cred_dict = get_credentials()
@@ -218,13 +218,13 @@ db = initialize_firebase(cred_dict) if cred_dict else None
 with st.form("input_form"):
     # Inputs inside the form
     consignment_number = st.text_input(
-        "Enter Consignment Number",
+        "Enter Consignment Number* (e.g. DF-AMCU9352772, VPI-AMCU9354567)",
         placeholder="Enter consignment number",
         max_chars=30,
         help="Maximum 30 characters.",
     )
     inspector_name = st.text_input(
-        "Enter Inspector Name",
+        "Enter Inspector Name*",
         placeholder="Enter inspector name",
         max_chars=15,
         help="Maximum 15 characters.",
@@ -232,19 +232,19 @@ with st.form("input_form"):
     
     # New Inputs
     apple_variety = st.selectbox(
-        "Choose the Apple Variety",
+        "Choose the Apple Variety*",
         ["", "I-Apple", "Turkey - Apple"],
         index=0,
         key='apple_variety'
     )
     
     apple_color = st.selectbox(
-        "Choose Apple Color",
+        "Choose Apple Color*",
         ["", "Red", "Dark Red", "Light Red"]
     )
     
     crate_type = st.selectbox(
-        "Choose Crate Type",
+        "Choose Crate Type*",
         ["", "White Crate", "Green Crate"],
         index=0,
         key='crate_type'
@@ -263,7 +263,7 @@ with st.form("input_form"):
         for i in range(3)
     ]
 
-    file = st.file_uploader("Upload Image/Video/PDF (Optional)", type=["jpg", "jpeg", "png", "mp4", "pdf"])
+    #file = st.file_uploader("Upload Image/Video/PDF (Optional)", type=["jpg", "jpeg", "png", "mp4", "pdf"])
 
     # Submit button
     submit_button = st.form_submit_button("Submit")
